@@ -32,6 +32,12 @@ This C++ program implements a user management system and a repository system all
 - `loginCredential.csv`: Stores registered user credentials (username, password).
 - `repositories.csv`: Stores a list of repository filenames.
 - `*.csv`: Each repository has its own CSV file storing repository details (username, repository name, commit data, file).
+<img width="305" alt="Screenshot 2024-05-09 at 11 41 28 PM" src="https://github.com/BTWQASIM/GIT_project/assets/149416693/e9bd6e35-5a94-4370-8ee4-5fd70b142fb2"><img width="279" alt="Screenshot 2024-05-09 at 11 39 37 PM" src="https://github.com/BTWQASIM/GIT_project/assets/149416693/eb0ebaca-2ecb-4921-a7ef-3372029efcc0">
+
+<img width="204" alt="Screenshot 2024-05-09 at 11 39 29 PM" src="https://github.com/BTWQASIM/GIT_project/assets/149416693/0e86fad1-bb11-4a1b-b26b-567a998c9dbb">
+
+<img width="226" alt="Screenshot 2024-05-09 at 11 40 41 PM" src="https://github.com/BTWQASIM/GIT_project/assets/149416693/74d70865-95b5-463b-a41f-f1cc361c9171">
+
 
 ## Contributors
 
