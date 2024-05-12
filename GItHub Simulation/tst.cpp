@@ -17,16 +17,18 @@ struct List
 
 struct RepositoryNode {
     string repositoryName;
-    List *commits;
-    List *files;
+    string Username;
+    List *commit;
+    List *file;
+    int height;
     RepositoryNode* left;
     RepositoryNode* right;
 
     RepositoryNode(){
         left = nullptr;
         right = nullptr;
-        commits = nullptr;
-        files = nullptr;
+        commit = nullptr;
+        file = nullptr;
     }
 };
 
@@ -36,6 +38,10 @@ struct User {
     string password;
     RepositoryNode* repositories;
     User* followers[50];
+    User* following[50];
+  
+    
+    
 };
 
 struct Node {
@@ -155,90 +161,91 @@ int hash(const string& key) {
         return nullptr;
     }
 };
-// make a class connection which uses graphs to store followers and following of a user
 
 
-/*class Connection : public HashTable{
-    public:
-    Connection(){
-        HashTable();
-    }
-    // use graph to store followers and following of a user
-    
-    void follow(const string& follower, const string& followee) {
-        Node *user1 = new Node;
-        user1->user = *accessUser(followee);
-        Node *user2 = new Node;
-        user2->user = *accessUser(follower);
-        user1->next = user2;
-        user2->next = nullptr;
-        int index = hash(follower);
-        if(table[index] == nullptr){
-            table[index] = user1;
-        }else{
-            Node* temp = table[index];
-            while(temp->next != nullptr){
-                temp = temp->next;
-            }
-            temp->next = user1;
-        }
 
-    }
-
-
-};*/
-
-
-class RepositoryTree : public HashTable{
+class SocialGraph {
 private:
-    RepositoryNode* root;
+    static const int MAX_USERS = 100;
+    bool adjMatrix[MAX_USERS][MAX_USERS]; 
+
+    int userCount = 0; 
+
+
+    int findUserIndex(const string& username) {
+        for (int i = 0; i < userCount; ++i) {
+            if (users[i].username == username) {
+                return i;
+            }
+        }
+        return -1; 
+    }
 
 public:
-    RepositoryTree() :root(nullptr) {}
+SocialGraph() {
+        for (int i = 0; i < MAX_USERS; ++i) {
+            for (int j = 0; j < MAX_USERS; ++j) {
+                adjMatrix[i][j] = false;
+            }
+        }
+    }
+    User users[MAX_USERS]; 
+
+   
+    void addUser(const string& username) {
+        if (userCount < MAX_USERS) {
+          //  users[userCount++] = User(username);
+        } else {
+            cout << "Cannot add more users. Maximum limit reached." << endl;
+        }
+    }
 
     
-    void createRepository(const string& repositoryName , const string& username) {
-        root = insert(root, repositoryName, username);
+    void followUser(const string& follower, const string& followee) {
+        int followerIndex = findUserIndex(follower);
+        int followeeIndex = findUserIndex(followee);
+
+        if (followerIndex != -1 && followeeIndex != -1) {
+            adjMatrix[followerIndex][followeeIndex] = true;
+        } else {
+            cout << "User does not exist." << endl;
+        }
     }
 
    
-    void deleteRepository(const string& repositoryName) {
-        root = remove(root, repositoryName);
-    }
+    void printFollowers(const string& username) {
+        int userIndex = findUserIndex(username);
 
- 
-    bool searchRepository(const string& repositoryName) {
-        return search(root, repositoryName);
-    }
-    
-    void loadDataRepo(const string& username){
-        string filename = username + "_repositories.csv";
-        ifstream file(filename);
-        if (!file) {
-            cout << "No repositories found for user " << username << endl;
-            return;
+        if (userIndex != -1) {
+            cout << "Followers of " << username << ":" << endl;
+            for (int i = 0; i < userCount; ++i) {
+                if (adjMatrix[i][userIndex]) {
+                    cout << users[i].username << endl;
+                }
+            }
+        } else {
+            cout << "User does not exist." << endl;
         }
+    }
+};
 
-        string repository;
-        while (getline(file, repository)) {
-            createRepository(repository, username);
-        }
-        file.close();
-    }
-    // a csv file to store names of repositories
-    void storeDataToFile(const string &filename) {
-        ofstream file("repositories.csv");
-        if (!file) {
-            cout << "Error: Unable to open file." << endl;
-            return;
-        }
-        file << filename << endl;
-        file.close();
-        cout << "Data stored to file successfully." << endl;
-    }
+
+class RepositoryTree: public HashTable
+{
 private:
-    
-    void storefileData(const string& filename, RepositoryNode* node, const string& username) {
+    RepositoryNode *root;
+
+public:
+    RepositoryTree() : root(nullptr)
+    {
+        loadDataFromFile("repositories.csv");
+    }
+
+    void printtree()
+    {
+        printTree(root);
+    }
+    void storefileData(const string& filename, RepositoryNode* node) {
     ofstream file(filename);
     if (!file.is_open()) {
         cout << "Error opening file." << endl;
@@ -249,92 +256,353 @@ private:
     if (node == nullptr) {
         return;
     }
-    file << username << ","<< node->repositoryName << "," << node->commits->data << "," << node->files->data << endl;
+    file << node->Username << ","<< node->repositoryName << "," << node->commit->data << "," << node->file->data << endl;
+    file.close();
+}
+   
+    void storeDataToFile(const string &filename) {
+        ofstream file("repositories.csv", ios::app);
+        if (!file) {
+            cout << "Error: Unable to open file." << endl;
+            return;
+        }
+        file << filename << endl;
+        file.close();
+        cout << "Data stored to file successfully." << endl;
+    }
+    
+    void createRepository(const string &repositoryName, const string &username, const string &commitData, const string &file)
+    {
+        root = insert(root, repositoryName, username, commitData, file);
+        storeDataToFile(repositoryName);
+    }
+
+    void loadDataFromFile(const string& path) {
+    ifstream file(path);
+
+    if (!file.is_open()) {
+        cerr << "Error: Unable to open main file " << path << endl;
+        return;
+    }
+
+    string line;
+    while (getline(file, line)) {
+        ifstream data(line);
+        if (!data.is_open()) {
+            cerr << "Error: Unable to open file " << line << endl;
+            continue;
+        }
+
+        string row;
+        while (getline(data, row)) {
+            stringstream rowStream(row);
+            string username, repositoryname, commit, file;
+
+            getline(rowStream, username, ',');
+            getline(rowStream, repositoryname, ',');
+            getline(rowStream, commit, ',');
+            getline(rowStream, file, ',');
+            root = insert(root, repositoryname+"_repositories.csv", username, commit, file);
+
+           
+
+        }
+
+        data.close();
+        cout << endl;
+    }
+
     file.close();
 }
 
-    RepositoryNode* insert(RepositoryNode* node, const string& repositoryName, const string& username) {
-        if (node == nullptr) {
-            RepositoryNode* newNode = new RepositoryNode();
-            newNode->repositoryName = repositoryName;
-            string data;
-            cout<<"Enter the data for the commit: ";
-            cin>>data;
-            newNode->commits = new List();
-            newNode->commits->data = data;
-            cout<<"Enter the data for the files: ";
-            cin>>data;
-            newNode->files = new List();
-            newNode->files->data = data;
-            
-            storefileData(repositoryName + "_repositories.csv", newNode, username);
-            storeDataToFile(repositoryName + "_repositories.csv");
+    void deleterepository(const string &repositoryName, const string &username)
+    {
+        root = deleteRepository(root, repositoryName, username);
+    }
 
+    bool searchRepository(const string &repositoryName)
+    {
+        return printRepository(search(root, repositoryName + "_repositories.csv"));
+    }
+
+private:
+    int getHeight(RepositoryNode *node)
+    {
+        if (node == nullptr)
+        {
+            return 0;
+        }
+        else
+        {
+            return node->height;
+        }
+    }
+
+    int getBalance(RepositoryNode *node)
+    {
+        if (node == nullptr)
+        {
+            return 0;
+        }
+        else
+        {
+            return getHeight(node->left) - getHeight(node->right);
+        }
+    }
+
+    RepositoryNode *rotateRight(RepositoryNode *y)
+    {
+        RepositoryNode *x = y->left;
+        RepositoryNode *T2 = x->right;
+
+        x->right = y;
+        y->left = T2;
+
+        y->height = max(getHeight(y->left), getHeight(y->right)) + 1;
+        x->height = max(getHeight(x->left), getHeight(x->right)) + 1;
+
+        return x;
+    }
+
+    RepositoryNode *rotateLeft(RepositoryNode *x)
+    {
+        RepositoryNode *y = x->right;
+        RepositoryNode *T2 = y->left;
+
+        y->left = x;
+        x->right = T2;
+
+        x->height = max(getHeight(x->left), getHeight(x->right)) + 1;
+        y->height = max(getHeight(y->left), getHeight(y->right)) + 1;
+
+        return y;
+    }
+
+    RepositoryNode *insert(RepositoryNode *node, const string &repositoryName, const string &username, const string &commitData, const string &fileName)
+    {
+        if (node == nullptr)
+        {
+            RepositoryNode *newNode = new RepositoryNode();
+            newNode->repositoryName = repositoryName;
+            newNode->Username = username;
+            newNode->commit = new List();
+            
+            newNode->commit->data = commitData;
+         
+            newNode->commit->next = nullptr;
+            newNode->file = new List();
+            newNode->file->data = fileName;
+            newNode->file->next = nullptr;
+            storefileData(repositoryName, newNode);
             return newNode;
         }
 
-        if (repositoryName < node->repositoryName) {
-            node->left = insert(node->left, repositoryName, username);
-        } else if (repositoryName > node->repositoryName) {
-            node->right = insert(node->right, repositoryName, username);
+        if (repositoryName < node->repositoryName)
+            node->left = insert(node->left, repositoryName, username, commitData, fileName);
+        else if (repositoryName > node->repositoryName)
+            node->right = insert(node->right, repositoryName, username, commitData, fileName);
+        else
+            return node;
+
+        node->height = 1 + max(getHeight(node->left), getHeight(node->right));
+
+        int balance = getBalance(node);
+
+        if (balance > 1 && repositoryName < node->left->repositoryName)
+            return rotateRight(node);
+
+        if (balance < -1 && repositoryName > node->right->repositoryName)
+            return rotateLeft(node);
+
+        if (balance > 1 && repositoryName > node->left->repositoryName)
+        {
+            node->left = rotateLeft(node->left);
+            return rotateRight(node);
+        }
+
+        if (balance < -1 && repositoryName < node->right->repositoryName)
+        {
+            node->right = rotateRight(node->right);
+            return rotateLeft(node);
         }
 
         return node;
     }
 
-   
-    RepositoryNode* remove(RepositoryNode* node, const string& repositoryName) {
-        if (node == nullptr) {
-            return nullptr;
-        }
+    RepositoryNode *findMin(RepositoryNode *node)
+    {
+        RepositoryNode *current = node;
+        while (current->left != nullptr)
+            current = current->left;
+        return current;
+    }
 
-        if (repositoryName < node->repositoryName) {
-            node->left = remove(node->left, repositoryName);
-        } else if (repositoryName > node->repositoryName) {
-            node->right = remove(node->right, repositoryName);
-        } else {
-            if (node->left == nullptr && node->right == nullptr) {
-                delete node;
-                return nullptr;
-            } else if (node->left == nullptr) {
-                RepositoryNode* temp = node->right;
-                delete node;
-                return temp;
-            } else if (node->right == nullptr) {
-                RepositoryNode* temp = node->left;
-                delete node;
-                return temp;
-            } else {
-                RepositoryNode* minNode = findMin(node->right);
-                node->repositoryName = minNode->repositoryName;
-                node->right = remove(node->right, minNode->repositoryName);
+    RepositoryNode *deleteRepository(RepositoryNode *node, const string &repositoryName, const string &username)
+    {
+        if (node == nullptr)
+            return node;
+
+        if (repositoryName < node->repositoryName)
+            node->left = deleteRepository(node->left, repositoryName, username);
+        else if (repositoryName > node->repositoryName)
+            node->right = deleteRepository(node->right, repositoryName, username);
+        else
+        {
+            if (username != node->Username)
+            {
+                cout << "You are not authorized to delete this repository." << endl;
+                return node;
+            }
+
+            // Delete the repository from the CSV file
+
+            deleteStringInFile("repositories.csv", repositoryName);
+
+            if (node->left == nullptr || node->right == nullptr)
+            {
+                RepositoryNode *temp;
+                if (node->left == nullptr)
+                {
+                    temp = node->right;
+                }
+                else
+                {
+                    temp = node->left;
+                }
+
+                if (temp == nullptr)
+                {
+                    temp = node;
+                    node = nullptr;
+                }
+                else
+                    *node = *temp;
+
+                delete temp;
+            }
+            else
+            {
+                RepositoryNode *temp = findMin(node->right);
+                node->repositoryName = temp->repositoryName;
+                node->right = deleteRepository(node->right, temp->repositoryName, username);
             }
         }
 
-        return node;
-    }
-    RepositoryNode* findMin(RepositoryNode* node) {
-        while (node->left != nullptr) {
-            node = node->left;
+        if (node == nullptr)
+            return node;
+
+        node->height = 1 + max(getHeight(node->left), getHeight(node->right));
+
+        int balance = getBalance(node);
+
+        if (balance > 1 && getBalance(node->left) >= 0)
+            return rotateRight(node);
+
+        if (balance > 1 && getBalance(node->left) < 0)
+        {
+            node->left = rotateLeft(node->left);
+            return rotateRight(node);
         }
+
+        if (balance < -1 && getBalance(node->right) <= 0)
+            return rotateLeft(node);
+
+        if (balance < -1 && getBalance(node->right) > 0)
+        {
+            node->right = rotateRight(node->right);
+            return rotateLeft(node);
+        }
+
         return node;
     }
 
-    bool search(RepositoryNode* node, const string& repositoryName) {
+    RepositoryNode *search(RepositoryNode *node, const string &repositoryName)
+    {
+        if (node == nullptr)
+            return nullptr;
+        else if (repositoryName == node->repositoryName)
+            return node;
+        else if (repositoryName < node->repositoryName)
+            return search(node->left, repositoryName);
+        else
+            return search(node->right, repositoryName);
+    }
 
-        if (node == nullptr) {
+    bool printRepository(RepositoryNode *node)
+    {
+        if (node != nullptr)
+        {
+            cout << "Repository Name: " << node->repositoryName << endl;
+            cout << "Commit: " << node->commit->data << endl;
+            cout << "File: " << node->file->data << endl;
+            return true;
+        }
+        return false;
+    }
+    void printList(List *head)
+    {
+        List *current = head;
+        while (current != nullptr)
+        {
+            cout << current->data << " ";
+            current = current->next;
+        }
+        cout << endl;
+    }
+    void printTree(RepositoryNode *node)
+    {
+        if (node != nullptr)
+        {
+            printTree(node->left);
+            cout << "Repository Name: " << node->repositoryName << endl;
+            cout << "Username: " << node->Username << endl;
+            cout << "Commits: ";
+            printList(node->commit);
+            cout << "Files: ";
+            printList(node->file);
+            cout << endl;
+            printTree(node->right);
+        }
+    }
+    bool deleteStringInFile(const string &filename, const string &searchString)
+    {
+        ifstream inFile(filename);
+        if (!inFile.is_open())
+        {
+
             return false;
         }
 
-        if (repositoryName == node->repositoryName) {
-            return true;
-        } else if (repositoryName < node->repositoryName) {
-            return search(node->left, repositoryName);
-        } else {
-            return search(node->right, repositoryName);
+        string line;
+        string content;
+
+        while (getline(inFile, line))
+        {
+            size_t pos = line.find(searchString);
+            if (pos != string::npos)
+            {
+
+                line.erase(pos, searchString.length());
+            }
+            content += line + '\n';
         }
+
+        inFile.close();
+
+        ofstream outFile(filename);
+        if (!outFile.is_open())
+        {
+            cout << "Error: Repository not deleted."<< endl;
+            return false;
+        }
+        outFile << content;
+        outFile.close();
+
+        cout <<"Repository deleted successfully."<< endl;
+        return true;
     }
 };
+
 class UserAccount : public RepositoryTree{
     public:
     UserAccount(){
@@ -402,7 +670,7 @@ class UserAccount : public RepositoryTree{
     cout << "Enter your choice: ";
     int choice;
     cin >> choice;
-    string username;
+    string username,commit,files;
     switch (choice) {
         case 1:
             cout << "Username: " << user->username << endl;
@@ -425,12 +693,17 @@ class UserAccount : public RepositoryTree{
             cout << "Enter the repository name: ";
             cin >> username;
 
+
             if(fileExists(username + "_repositories.csv")){
                 cout << "Repository already exists." << endl;
                 sleep(5);
             }
             else{
-               repo.createRepository(username, user->username);
+                cout<<"Enter the commit data: ";
+                cin>>commit;
+                cout<<"Enter the file name: ";
+                cin>>files;
+               repo.createRepository(username + "_repositories.csv", user->username, commit, files);
             }
             
             
@@ -438,14 +711,17 @@ class UserAccount : public RepositoryTree{
         case 6:
             cout << "Enter the repository name: ";
             cin >> username;
-            repo.deleteRepository(username);
+            repo.deleterepository(username, user->username);
+            cout << "Deleting repository..." << endl;
             break;
         case 7:
             cout << "Enter the repository name: ";
+            username="";
             cin >> username;
             
-            if(repo.searchRepository(username)){
+            if(repo.searchRepository(username+ "_repositories.csv")){
                 cout << "Repository found." << endl;
+                repo.printtree();
 
             }
             else{
@@ -496,7 +772,6 @@ int main() {
                     cin >> password;
                    if(userAccount.loginUser(username, password)){
                     User* user = userAccount.accessUser(username);
-                    userAccount.loadDataRepo(username);
                     userAccount.UserMenu(user);
                 }
                 }
