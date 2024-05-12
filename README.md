@@ -35,7 +35,7 @@ This C++ program implements a user management system and a repository system all
 
 ## Contributors
 
-- [Qasim Zubair]
+- Qasim Zubair
 
 ## License
 
